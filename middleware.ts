@@ -19,32 +19,22 @@ async function verifyJWT(token: string): Promise<boolean> {
   }
 }
 
-export async function middleware(request: NextRequest) {
-  const token = request.cookies.get('token')?.value
+export function middleware(request: NextRequest) {
+  const token = request.cookies.get('token')
+  const isAuthPage = request.nextUrl.pathname.startsWith('/login') || 
+                    request.nextUrl.pathname.startsWith('/register')
 
-  // 需要保护的路由
-  const protectedPaths = ['/dashboard', '/profile']
-  const isProtectedPath = protectedPaths.some(path => 
-    request.nextUrl.pathname.startsWith(path)
-  )
-
-  if (!isProtectedPath) {
-    return NextResponse.next()
-  }
-
-  if (!token) {
+  // 没有token且不是认证页面，重定向到登录
+  if (!token && !isAuthPage) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
-  try {
-    const isValid = await verifyJWT(token)
-    if (!isValid) {
-      throw new Error('Invalid token')
-    }
-    return NextResponse.next()
-  } catch (error) {
-    return NextResponse.redirect(new URL('/login', request.url))
+  // 有token但访问认证页面，重定向到仪表盘
+  if (token && isAuthPage) {
+    return NextResponse.redirect(new URL('/dashboard', request.url))
   }
+
+  return NextResponse.next()
 }
 
 export const config = {
