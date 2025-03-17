@@ -12,6 +12,7 @@ model User {
   email     String   @unique
   password  String
   name      String?
+  verified  Boolean  @default(false)  // 添加邮箱验证状态
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   posts     Post[]   // 一个用户可以有多篇文章
@@ -22,4 +23,16 @@ model Post {
   title    String
   author   User     @relation(fields: [authorId], references: [id])
   authorId Int
+}
+
+model VerificationCode {
+  id        Int      @id @default(autoincrement())
+  email     String
+  code      String
+  type      String   // 验证类型：register/reset-password
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+  used      Boolean  @default(false)
+
+  @@index([email, type])
 } 

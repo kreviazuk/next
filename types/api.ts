@@ -7,6 +7,7 @@ export interface RegisterRequest {
   email: string
   name: string
   password: string
+  code: string  // 验证码
 }
 
 export interface AuthResponse {

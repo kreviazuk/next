@@ -5,10 +5,10 @@ import type { RegisterRequest } from '@/types/api'
 
 export async function POST(req: Request) {
   try {
-    const { email, password, name }: RegisterRequest = await req.json()
+    const { email, password, name, code }: RegisterRequest = await req.json()
 
-    // 输入验证
-    if (!email || !password || !name) {
+    // 验证必填字段
+    if (!email || !password || !name || !code) {
       return NextResponse.json(
         { error: '请填写所有必填字段' },
         { status: 400 }
@@ -42,31 +42,51 @@ export async function POST(req: Request) {
       )
     }
 
+    // 检查验证码
+    const verificationCode = await prisma.verificationCode.findFirst({
+      where: {
+        email: email.toLowerCase(),
+        code,
+        type: 'register',
+        used: false,
+        expiresAt: {
+          gt: new Date()
+        }
+      }
+    })
+
+    if (!verificationCode) {
+      return NextResponse.json(
+        { error: '验证码无效或已过期' },
+        { status: 400 }
+      )
+    }
+
     // 检查邮箱和用户名是否已存在
     const existingUsers = await prisma.user.findMany({
       where: {
         OR: [
-          { email: email.toLowerCase() }, // 邮箱转小写
+          { email: email.toLowerCase() },
           { name }
         ]
       }
     })
 
     if (existingUsers.length > 0) {
-      const existingEmail = existingUsers.find(user => user.email === email.toLowerCase())
-      const existingName = existingUsers.find(user => user.name === name)
+      const emailTaken = existingUsers.some(user => user.email === email.toLowerCase())
+      const usernameTaken = existingUsers.some(user => user.name === name)
 
-      if (existingEmail && existingName) {
+      if (emailTaken && usernameTaken) {
         return NextResponse.json(
           { error: '该邮箱和用户名都已被使用' },
           { status: 400 }
         )
-      } else if (existingEmail) {
+      } else if (emailTaken) {
         return NextResponse.json(
           { error: '该邮箱已被注册' },
           { status: 400 }
         )
-      } else if (existingName) {
+      } else {
         return NextResponse.json(
           { error: '该用户名已被使用' },
           { status: 400 }
@@ -75,30 +95,32 @@ export async function POST(req: Request) {
     }
 
     // 创建用户
+    const hashedPassword = await bcrypt.hash(password, 12)
     const user = await prisma.user.create({
       data: {
-        email: email.toLowerCase(), // 存储时转小写
-        password: await bcrypt.hash(password, 12), // 增加加密强度
+        email: email.toLowerCase(),
+        password: hashedPassword,
         name,
-        createdAt: new Date(), // 添加创建时间
-        updatedAt: new Date()  // 添加更新时间
+        verified: true,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      },
+      select: {
+        id: true,
+        email: true,
+        name: true
       }
     })
 
-    return NextResponse.json({ 
-      id: user.id,
-      email: user.email,
-      name: user.name 
+    // 标记验证码已使用
+    await prisma.verificationCode.update({
+      where: { id: verificationCode.id },
+      data: { used: true }
     })
+
+    return NextResponse.json(user)
   } catch (error) {
     console.error('注册错误:', error)
-    // 更详细的错误处理
-    if (error instanceof Error) {
-      return NextResponse.json(
-        { error: `注册失败: ${error.message}` },
-        { status: 500 }
-      )
-    }
     return NextResponse.json(
       { error: '注册失败，请稍后重试' },
       { status: 500 }
