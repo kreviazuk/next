@@ -12,7 +12,10 @@ export default function MainLayout({
   const router = useRouter()
   const pathname = usePathname()
   const [collapsed, setCollapsed] = useState(false)
-
+  const handleLogout = () => {
+    localStorage.removeItem('token')
+    router.push('/login')
+  }
   return (
     <div className="flex h-screen">
       {/* 侧边栏 */}
@@ -62,7 +65,7 @@ export default function MainLayout({
             </button>
             <div className="flex items-center space-x-4">
               <span className="text-gray-600">管理员</span>
-              <button className="text-gray-600 hover:text-gray-900">
+              <button className="text-gray-600 hover:text-gray-900" onClick={handleLogout}>
                 退出
               </button>
             </div>
