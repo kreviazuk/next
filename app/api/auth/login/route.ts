@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
-import bcrypt from 'bcryptjs'
+import { compare } from 'bcryptjs'
 import jwt from 'jsonwebtoken'
-import prisma from '@/lib/prisma'
+import { prisma } from '@/lib/prisma'
 import type { LoginRequest, AuthResponse } from '@/types/api'
 
 export async function POST(req: Request) {
@@ -18,7 +18,7 @@ export async function POST(req: Request) {
       }
     })
 
-    if (!user || !(await bcrypt.compare(password, user.password))) {
+    if (!user || !(await compare(password, user.password))) {
       return NextResponse.json(
         { error: '用户名/邮箱或密码错误' },
         { status: 401 }
@@ -36,7 +36,7 @@ export async function POST(req: Request) {
       user: {
         id: user.id,
         email: user.email,
-        name: user.name || ''
+        name: user.name ?? ''
       },
       token
     }

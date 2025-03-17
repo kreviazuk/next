@@ -5,9 +5,9 @@ export interface LoginRequest {
 
 export interface RegisterRequest {
   email: string
-  name: string
   password: string
-  code: string  // 验证码
+  name: string
+  verificationCode: string
 }
 
 export interface AuthResponse {

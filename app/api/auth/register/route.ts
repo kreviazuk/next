@@ -1,16 +1,22 @@
 import { NextResponse } from 'next/server'
-import bcrypt from 'bcryptjs'
-import prisma from '@/lib/prisma'
+import { Redis } from '@upstash/redis'
+import { hash } from 'bcryptjs'
+import { prisma } from '@/lib/prisma'
 import type { RegisterRequest } from '@/types/api'
+
+const redis = new Redis({
+  url: process.env.UPSTASH_REDIS_REST_URL || '',
+  token: process.env.UPSTASH_REDIS_REST_TOKEN || '',
+})
 
 export async function POST(req: Request) {
   try {
-    const { email, password, name, code }: RegisterRequest = await req.json()
+    const { email, password, name, verificationCode }: RegisterRequest = await req.json()
 
     // 验证必填字段
-    if (!email || !password || !name || !code) {
+    if (!email || !password || !name || !verificationCode) {
       return NextResponse.json(
-        { error: '请填写所有必填字段' },
+        { error: '所有字段都是必填的' },
         { status: 400 }
       )
     }
@@ -42,85 +48,61 @@ export async function POST(req: Request) {
       )
     }
 
-    // 检查验证码
-    const verificationCode = await prisma.verificationCode.findFirst({
-      where: {
-        email: email.toLowerCase(),
-        code,
-        type: 'register',
-        used: false,
-        expiresAt: {
-          gt: new Date()
-        }
-      }
-    })
-
-    if (!verificationCode) {
+    // 验证验证码
+    const storedCode = await redis.get(`verification:${email}`)
+    console.log('验证码验证 - 邮箱:', email)
+    console.log('存储的验证码类型:', typeof storedCode, '值:', storedCode)
+    console.log('用户输入的验证码类型:', typeof verificationCode, '值:', verificationCode)
+    
+    // 确保两个验证码都转换为字符串进行比较
+    const storedCodeStr = String(storedCode)
+    const inputCodeStr = String(verificationCode)
+    
+    console.log('转换后的比较:')
+    console.log('存储的验证码:', storedCodeStr)
+    console.log('用户输入的验证码:', inputCodeStr)
+    console.log('是否相等:', storedCodeStr === inputCodeStr)
+    
+    if (!storedCode || storedCodeStr !== inputCodeStr) {
       return NextResponse.json(
         { error: '验证码无效或已过期' },
         { status: 400 }
       )
     }
 
-    // 检查邮箱和用户名是否已存在
-    const existingUsers = await prisma.user.findMany({
+    // 检查邮箱是否已被注册
+    const existingUser = await prisma.user.findFirst({
       where: {
         OR: [
-          { email: email.toLowerCase() },
+          { email },
           { name }
         ]
       }
     })
 
-    if (existingUsers.length > 0) {
-      const emailTaken = existingUsers.some(user => user.email === email.toLowerCase())
-      const usernameTaken = existingUsers.some(user => user.name === name)
-
-      if (emailTaken && usernameTaken) {
-        return NextResponse.json(
-          { error: '该邮箱和用户名都已被使用' },
-          { status: 400 }
-        )
-      } else if (emailTaken) {
-        return NextResponse.json(
-          { error: '该邮箱已被注册' },
-          { status: 400 }
-        )
-      } else {
-        return NextResponse.json(
-          { error: '该用户名已被使用' },
-          { status: 400 }
-        )
-      }
+    if (existingUser) {
+      return NextResponse.json(
+        { error: '邮箱或用户名已被注册' },
+        { status: 400 }
+      )
     }
 
-    // 创建用户
-    const hashedPassword = await bcrypt.hash(password, 12)
-    const user = await prisma.user.create({
+    // 创建新用户
+    const hashedPassword = await hash(password, 12)
+    await prisma.user.create({
       data: {
-        email: email.toLowerCase(),
-        password: hashedPassword,
+        email,
         name,
-        verified: true,
-        createdAt: new Date(),
-        updatedAt: new Date()
+        password: hashedPassword,
       },
-      select: {
-        id: true,
-        email: true,
-        name: true
-      }
     })
 
-    // 标记验证码已使用
-    await prisma.verificationCode.update({
-      where: { id: verificationCode.id },
-      data: { used: true }
-    })
+    // 删除已使用的验证码
+    await redis.del(`verification:${email}`)
 
-    return NextResponse.json(user)
-  } catch (error) {
-    console.error('注册错误:', error)
+    return NextResponse.json({ message: '注册成功' })
+  } catch (error: any) {
+    console.error('注册失败:', error)
     return NextResponse.json(
       { error: '注册失败，请稍后重试' },
       { status: 500 }
