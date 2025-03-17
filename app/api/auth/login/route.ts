@@ -6,16 +6,21 @@ import type { LoginRequest, AuthResponse } from '@/types/api'
 
 export async function POST(req: Request) {
   try {
-    const { email, password }: LoginRequest = await req.json()
+    const { identifier, password }: LoginRequest = await req.json()
 
-    // 查找用户
-    const user = await prisma.user.findUnique({
-      where: { email }
+    // 查找用户（通过邮箱或用户名）
+    const user = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { email: identifier },
+          { name: identifier }
+        ]
+      }
     })
 
     if (!user || !(await bcrypt.compare(password, user.password))) {
       return NextResponse.json(
-        { error: '邮箱或密码错误' },
+        { error: '用户名/邮箱或密码错误' },
         { status: 401 }
       )
     }

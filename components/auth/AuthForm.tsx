@@ -11,6 +11,7 @@ interface AuthFormProps {
 export default function AuthForm({ mode }: AuthFormProps) {
   const router = useRouter()
   const [formData, setFormData] = useState({
+    identifier: '',
     email: '',
     password: '',
     name: ''
@@ -29,7 +30,10 @@ export default function AuthForm({ mode }: AuthFormProps) {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(mode === 'login' ? {
+          identifier: formData.identifier,
+          password: formData.password
+        } : formData),
       })
 
       const data = await res.json()
@@ -50,6 +54,8 @@ export default function AuthForm({ mode }: AuthFormProps) {
     }
   }
 
+  const inputClassName = "block w-100 h-12 px-4 text-base rounded-lg border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 placeholder:text-gray-400"
+
   return (
     <div className="min-h-screen flex flex-col justify-center sm:px-6 lg:px-8 bg-gray-50">
       <div className="sm:mx-auto sm:w-full sm:max-w-3xl">
@@ -67,48 +73,71 @@ export default function AuthForm({ mode }: AuthFormProps) {
           )}
 
           <form className="space-y-6" onSubmit={handleSubmit}>
-            {mode === 'register' && (
+            {mode === 'register' ? (
+              <>
+                <div>
+                  <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                    邮箱地址
+                  </label>
+                  <div>
+                    <input
+                      id="email"
+                      name="email"
+                      type="email"
+                      autoComplete="email"
+                      required
+                      value={formData.email}
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      className={inputClassName}
+                      placeholder="用于登录和找回密码"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
+                    用户名
+                  </label>
+                  <div>
+                    <input
+                      id="name"
+                      name="name"
+                      type="text"
+                      required
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      className={inputClassName}
+                      placeholder="用于登录和显示"
+                    />
+                  </div>
+                </div>
+              </>
+            ) : (
               <div>
-                <label htmlFor="name" className="block text-sm font-medium text-gray-700">
-                  用户名
+                <label htmlFor="identifier" className="block text-sm font-medium text-gray-700 mb-2">
+                  用户名或邮箱
                 </label>
-                <div className="mt-2">
+                <div>
                   <input
-                    id="name"
-                    name="name"
+                    id="identifier"
+                    name="identifier"
                     type="text"
+                    autoComplete="username"
                     required
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="block w-full rounded-md border-0 py-2.5 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                    value={formData.identifier}
+                    onChange={(e) => setFormData({ ...formData, identifier: e.target.value })}
+                    className={inputClassName}
+                    placeholder="请输入用户名或邮箱"
                   />
                 </div>
               </div>
             )}
 
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                邮箱地址
-              </label>
-              <div className="mt-2">
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  autoComplete="email"
-                  required
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="block w-full rounded-md border-0 py-2.5 px-30 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
                 密码
               </label>
-              <div className="mt-2">
+              <div>
                 <input
                   id="password"
                   name="password"
@@ -117,7 +146,8 @@ export default function AuthForm({ mode }: AuthFormProps) {
                   required
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className="block w-full rounded-md border-0 py-2.5 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                  className={inputClassName}
+                  placeholder="请输入密码"
                 />
               </div>
             </div>
@@ -126,7 +156,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
               <button
                 type="submit"
                 disabled={loading}
-                className="flex w-full justify-center rounded-md bg-indigo-600 px-3 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex w-full justify-center rounded-lg bg-indigo-600 px-4 py-3 text-base font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? '处理中...' : mode === 'login' ? '登录' : '注册'}
               </button>

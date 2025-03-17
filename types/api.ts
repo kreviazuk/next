@@ -1,10 +1,12 @@
 export interface LoginRequest {
-  email: string
+  identifier: string  // 用户名或邮箱
   password: string
 }
 
-export interface RegisterRequest extends LoginRequest {
+export interface RegisterRequest {
+  email: string
   name: string
+  password: string
 }
 
 export interface AuthResponse {
