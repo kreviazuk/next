@@ -38,14 +38,26 @@ export const menuItems: MenuItem[] = [
         path: '/books/manage'
       },
       {
-        key: 'readers',
-        label: '读者管理',
-        path: '/books/readers'
-      },
-      {
         key: 'borrowing',
         label: '借阅管理',
         path: '/books/borrowing'
+      }
+    ]
+  },
+  {
+    key: 'readers',
+    label: '读者管理',
+    path: '/readers',
+    children: [
+      {
+        key: 'readers-manage',
+        label: '读者管理',
+        path: '/readers/manage'
+      },
+      {
+        key: 'readers-new',
+        label: '添加读者',
+        path: '/readers/new'
       }
     ]
   }
