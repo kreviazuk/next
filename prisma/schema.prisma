@@ -43,4 +43,18 @@ model VerificationCode {
   used      Boolean  @default(false)
 
   @@index([email, type])
+}
+
+model Reader {
+  id        String   @id @default(cuid())
+  name      String
+  gender    String
+  age       Int
+  phone     String
+  address   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([name])
+  @@index([phone])
 } 
