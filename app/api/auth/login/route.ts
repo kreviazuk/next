@@ -10,6 +10,12 @@ export async function POST(req: Request) {
 
     // 查找用户（通过邮箱或用户名）
     const user = await prisma.user.findFirst({
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        password: true
+      },
       where: {
         OR: [
           { email: identifier },
@@ -18,25 +24,38 @@ export async function POST(req: Request) {
       }
     })
 
-    if (!user || !(await compare(password, user.password))) {
+    if (!user) {
       return NextResponse.json(
-        { error: '用户名/邮箱或密码错误' },
+        { error: '用户不存在' },
+        { status: 404 }
+      )
+    }
+
+    // 验证密码
+    const isPasswordValid = await compare(password, user.password)
+    
+    if (!isPasswordValid) {
+      return NextResponse.json(
+        { error: '密码错误' },
         { status: 401 }
       )
     }
 
-    // 生成token
+    // 生成令牌
     const token = jwt.sign(
-      { userId: user.id },
-      process.env.JWT_SECRET || 'your-secret-key',
-      { expiresIn: '24h' }
+      { 
+        id: user.id,
+        email: user.email
+      },
+      process.env.JWT_SECRET || 'default_secret',
+      { expiresIn: '1d' }
     )
 
     const response: AuthResponse = {
       user: {
         id: user.id,
-        email: user.email,
-        name: user.name ?? ''
+        name: user.name,
+        email: user.email
       },
       token
     }
@@ -55,7 +74,7 @@ export async function POST(req: Request) {
 
     return nextResponse
   } catch (error) {
-    console.error('登录错误:', error)
+    console.error('登录失败:', error)
     return NextResponse.json(
       { error: '登录失败' },
       { status: 500 }

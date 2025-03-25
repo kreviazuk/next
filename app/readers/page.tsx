@@ -23,7 +23,7 @@ export default function ReadersPage() {
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
-    fetchReaders();
+    // fetchReaders();
   }, []);
 
   const fetchReaders = async () => {

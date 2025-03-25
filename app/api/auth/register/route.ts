@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server'
 import { Redis } from '@upstash/redis'
 import { hash } from 'bcryptjs'
+import jwt from 'jsonwebtoken'
 import { prisma } from '@/lib/prisma'
-import type { RegisterRequest } from '@/types/api'
+import type { RegisterRequest, AuthResponse } from '@/types/api'
 
 const redis = new Redis({
   url: process.env.UPSTASH_REDIS_REST_URL || '',
@@ -89,7 +90,7 @@ export async function POST(req: Request) {
 
     // 创建新用户
     const hashedPassword = await hash(password, 12)
-    await prisma.user.create({
+    const user = await prisma.user.create({
       data: {
         email,
         name,
@@ -100,7 +101,38 @@ export async function POST(req: Request) {
     // 删除已使用的验证码
     await redis.del(`verification:${email}`)
 
-    return NextResponse.json({ message: '注册成功' })
+    // 生成令牌
+    const token = jwt.sign(
+      { 
+        id: user.id,
+        email: user.email
+      },
+      process.env.JWT_SECRET || 'default_secret',
+      { expiresIn: '1d' }
+    )
+
+    const response: AuthResponse = {
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email
+      },
+      token
+    }
+
+    const nextResponse = NextResponse.json(response)
+
+    // 设置cookie
+    nextResponse.cookies.set({
+      name: 'token',
+      value: token,
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 // 24小时
+    })
+
+    return nextResponse
   } catch (error: any) {
     console.error('注册失败:', error)
     return NextResponse.json(

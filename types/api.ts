@@ -10,11 +10,13 @@ export interface RegisterRequest {
   verificationCode: string
 }
 
+export interface User {
+  id: string;
+  name: string | null;
+  email: string;
+}
+
 export interface AuthResponse {
-  user: {
-    id: number
-    email: string
-    name: string
-  }
-  token: string
+  user: User;
+  token: string;
 } 

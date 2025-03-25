@@ -47,18 +47,6 @@ export const menuItems: MenuItem[] = [
   {
     key: 'readers',
     label: '读者管理',
-    path: '/readers',
-    children: [
-      {
-        key: 'readers-manage',
-        label: '读者管理',
-        path: '/readers/manage'
-      },
-      {
-        key: 'readers-new',
-        label: '添加读者',
-        path: '/readers/new'
-      }
-    ]
+    path: '/readers'
   }
 ] 
